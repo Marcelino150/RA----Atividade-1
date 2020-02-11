@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <stdio_ext.h>
 
 /*
  * Cliente UDP
@@ -19,17 +20,17 @@ char **argv;
    unsigned short port;
    int server_address_size;
    struct sockaddr_in server;
-   char buf[2000];
+   char command[200],received[2000];
 
    /* 
     * O primeiro argumento (argv[1]) é o endereço IP do servidor.
     * O segundo argumento (argv[2]) é a porta do servidor.
     */
-   /*if(argc != 3)
+   if(argc != 3)
    {
       printf("Use: %s enderecoIP porta\n",argv[0]);
       exit(1);
-   }*/
+   }
   port = htons(atoi(argv[2]));
 
    /*
@@ -46,23 +47,33 @@ char **argv;
    server.sin_port        = port;               /* Porta do servidor        */
    server.sin_addr.s_addr = inet_addr(argv[1]); /* Endereço IP do servidor  */
 
-   //strcpy(buf, "Hello");
-   strcpy(buf,argv[3]);
-
    /* Envia a mensagem no buffer para o servidor */
-   if (sendto(s, buf, (strlen(buf)+1), 0, (struct sockaddr *)&server, sizeof(server)) < 0)
-   {
-       perror("sendto()");
-       exit(2);
-   }
+   while(1){
 
-   if(recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *) &server, &server_address_size) <0)
-   {
-       perror("recvfrom()");
-       exit(1);
-   }
+	printf("\n> ");
 
-   printf("Recebida a mensagem\n\n %s \n\ndo endereco IP %s da porta %d\n",buf,inet_ntoa(server.sin_addr),ntohs(server.sin_port));
+	__fpurge(stdin);
+	gets(command);
+
+	if(strcmp("exit",command) == 0)
+	  break;
+
+	if (sendto(s, command, (strlen(command)+1), 0, (struct sockaddr *)&server, sizeof(server)) < 0)
+	{
+		perror("sendto()");
+		exit(2);
+	}
+
+	if(recvfrom(s, received, sizeof(received), 0, (struct sockaddr *) &server, &server_address_size) <0)
+	{
+		perror("recvfrom()");
+		 exit(1);
+	}
+	else{
+   		printf("Recebida a mensagem\n\n %s \ndo endereco IP %s da porta %d\n",received,inet_ntoa(server.sin_addr),ntohs(server.sin_port));
+	}
+
+   }
 
    /* Fecha o socket */
    close(s);
