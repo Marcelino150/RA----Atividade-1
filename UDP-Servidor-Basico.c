@@ -10,12 +10,12 @@
 /*
  * Servidor UDP
  */
-void main()
+void main(int argc, char **argv)
 {
    int sockint,s, namelen, client_address_size;
    struct sockaddr_in client, server;
-   char buf[32],buff[2000];
-   FILE *f ;
+   char command[200],shellresult[2000];
+   FILE *f;
 
    /*
     * Cria um socket UDP (dgram). 
@@ -61,28 +61,33 @@ void main()
     * O endereço do cliente será armazenado em "client".
     */
    client_address_size = sizeof(client);
-   if(recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *) &client, &client_address_size) <0)
-   {
-       perror("recvfrom()");
-       exit(1);
+
+   while(1){
+
+	if(recvfrom(s, command, sizeof(command), 0, (struct sockaddr *) &client, &client_address_size) <0)
+	{
+	   perror("recvfrom()");
+	   exit(1);
+	}
+
+	/*
+	* Imprime a mensagem recebida, o endereço IP do cliente
+	* e a porta do cliente 
+	*/
+	printf("Comando [%s] recebido do endereco IP %s pela porta %d\n",command,inet_ntoa(client.sin_addr),ntohs(client.sin_port));
+
+	f = popen(command,"r");
+	fread(shellresult,sizeof(char),2000,f);
+        pclose(f);
+
+	if (sendto(s, shellresult, (strlen(shellresult)+1), 0, (struct sockaddr *)&client, sizeof(client)) < 0)
+	{
+	   perror("sendto()");
+	   exit(2);
+	}
+
+	memset(shellresult,sizeof(shellresult),0);
    }
-
-   f = popen(buf,"r");
-
-   fread(buff,sizeof(char),2000,f);
-
-  if (sendto(s, buff, (strlen(buff)+1), 0, (struct sockaddr *)&client, sizeof(client)) < 0)
-   {
-       perror("sendto()");
-       exit(2);
-   }
-
-   /*
-    * Imprime a mensagem recebida, o endereço IP do cliente
-    * e a porta do cliente 
-    */
-   printf("Recebida a mensagem %s do endereco IP %s da porta %d\n",buf,inet_ntoa(client.sin_addr),ntohs(client.sin_port));
-   //system(buf);
 
    /*
     * Fecha o socket.
